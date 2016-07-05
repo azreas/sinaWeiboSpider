@@ -12,44 +12,44 @@ var cheerio = require('cheerio');
 var cookieColl = Request.jar()
 var request = Request.defaults({jar: cookieColl});
 
-var connection_string = '127.0.0.1:27017/weiboSina3';
+var connection_string = '192.168.1.240:27017/weiboSina3';
 var db = monk(connection_string);
 var cachedUsers = {};
 
 var userCnt = 0;
 
-function saveUser(user){
-  var userColl = db.get("users");
-   userColl.insert(user);
+function saveUser(user) {
+    var userColl = db.get("users");
+    userColl.insert(user);
 }
 
 
-function getJsonObj(body){
+function getJsonObj(body) {
     var start = body.indexOf("{");
     var end = body.lastIndexOf("}");
-    var jsonStr = body.substr(start,end -start + 1);
+    var jsonStr = body.substr(start, end - start + 1);
     var responseJson = JSON.parse(jsonStr);
     return responseJson;
 }
 
-function getFansRecur(userId){
+function getFansRecur(userId) {
 
     //新浪限制只能取每人前十页的fans
-    for(var i=1; i< 10; i++){
+    for (var i = 1; i < 10; i++) {
         var fansUrl = "http://weibo.com/" + userId + "/follow?page=" + i;
 
         request({
             "uri": fansUrl,
             "encoding": "utf-8"
-        }, function(err,response,body){
-            if(err){
+        }, function (err, response, body) {
+            if (err) {
                 console.log(err);
             }
-            else{
-                var userLst = getUserLst(body,userId);
+            else {
+                var userLst = getUserLst(body, userId);
 
-                if (userLst){
-                    userLst.map(function(item){
+                if (userLst) {
+                    userLst.map(function (item) {
                         getFansRecur(item.uId);
                     });
                 }
@@ -59,35 +59,35 @@ function getFansRecur(userId){
     }
 }
 
-function getUserLst(htmlContent,userId){
+function getUserLst(htmlContent, userId) {
     var matched = htmlContent.match(/\"follow_list\s*\\\".*\/ul>/gm);
 
-    if(matched) {
-        var str = matched[0].replace(/(\\n|\\t|\\r)/g," ").replace(/\\/g,"");
+    if (matched) {
+        var str = matched[0].replace(/(\\n|\\t|\\r)/g, " ").replace(/\\/g, "");
         var ulStr = "<ul class=" + str;
 
         var $ = cheerio.load(ulStr);
 
         var myFans = [];
         $("li[action-data]").map(function (index, item) {
-            var userInfo = getUserInfo($,this);
+            var userInfo = getUserInfo($, this);
 
-            if(userInfo){
-               if(!cachedUsers[userInfo.uId]){
-			       userInfo.from = userId; //设置来源用户
-                   cachedUsers[userInfo.uId] = true;
+            if (userInfo) {
+                if (!cachedUsers[userInfo.uId]) {
+                    userInfo.from = userId; //设置来源用户
+                    cachedUsers[userInfo.uId] = true;
 
-                  // if(userInfo.fansCnt > 100){
-				  
-                       userCnt++;
-                       console.log(userCnt);
-                       saveUser(userInfo);
-                       myFans.push(userInfo);
-                   
-               }
-                else{
-                   console.log("duplicate users");
-               }
+                    // if(userInfo.fansCnt > 100){
+
+                    userCnt++;
+                    console.log(userCnt);
+                    saveUser(userInfo);
+                    myFans.push(userInfo);
+
+                }
+                else {
+                    console.log("duplicate users");
+                }
             }
         });
 
@@ -97,62 +97,62 @@ function getUserLst(htmlContent,userId){
     return null;
 }
 
-function getUserInfo($,liSelector){
-    var liActionData =$(liSelector).attr("action-data").split("&");
+function getUserInfo($, liSelector) {
+    var liActionData = $(liSelector).attr("action-data").split("&");
     var sex = "unknown";
 
-    if(liActionData.length == 3){
+    if (liActionData.length == 3) {
         sex = liActionData[2].split("=")[1];
     }
 
     var alnk = $(liSelector).find("a[usercard]");
 
-    if(alnk.length < 1){
+    if (alnk.length < 1) {
         console.log("ddd");
         return null;
     }
 
-    var addr =  $(liSelector).find("div.name span").text().trim();
+    var addr = $(liSelector).find("div.name span").text().trim();
 
     var infoSel = $(liSelector).find("div.con_left div.info");
 
     var personInfo = "";
 
-    if(infoSel.length > 0){
+    if (infoSel.length > 0) {
         personInfo = infoSel.text();
     }
 
     var cntSel = $(liSelector).find("div.con_left div.connect a");
 
     return {
-        name:alnk.text(),
-        uId:alnk.attr("usercard").split('=')[1],
-        followCnt:tryParseInt($(cntSel[0]).text()),
-        fansCnt:tryParseInt($(cntSel[1]).text()),
-        weiboCnt:tryParseInt($(cntSel[2]).text()),
+        name: alnk.text(),
+        uId: alnk.attr("usercard").split('=')[1],
+        followCnt: tryParseInt($(cntSel[0]).text()),
+        fansCnt: tryParseInt($(cntSel[1]).text()),
+        weiboCnt: tryParseInt($(cntSel[2]).text()),
         addr: addr,
-        sex:sex,
+        sex: sex,
         info: personInfo
     };
 }
 
-function tryParseInt(str){
-    try{
+function tryParseInt(str) {
+    try {
         return parseInt(str);
     }
-    catch(e){
+    catch (e) {
         console.log("parseInt failed.")
         return 0;
     }
 }
 
-function log(msg){
+function log(msg) {
     console.log(msg);
 }
 
 function start() {
-    var userName = "yourWeiboAccount";
-    var password = "pwd";
+    var userName = "abc";
+    var password = "abc";
 
     var preLoginUrl = "http://login.sina.com.cn/sso/prelogin.php?entry=weibo&callback=sinaSSOController.preloginCallBack&su=&rsakt=mod&checkpin=1&client=ssologin.js(v1.4.11)&_=" + (new Date()).getTime();
 
@@ -212,20 +212,20 @@ function start() {
             request.post({
                 "uri": loginUrl,
                 "encoding": null,  //GBK编码 需要额外收到处理,
-                 form: loginPostData
+                form: loginPostData
 
             }, callback);
         },
         function (responseCode, body, callback) {
-            body = iconv.decode(body,"GBK");
+            body = iconv.decode(body, "GBK");
 
-            log(body)
+            log(body);
 
             var errReason = /reason=(.*?)\"/;
             var errorLogin = body.match(errReason);
 
             if (errorLogin) {
-               callback("登录失败,原因:" + errorLogin[1]);
+                callback("登录失败,原因:" + errorLogin[1]);
             }
             else {
                 var urlReg = /location\.replace\(\'(.*?)\'\)./;
@@ -248,7 +248,7 @@ function start() {
             var responseJson = getJsonObj(body);
             console.log(responseJson);
 
-            var myfansUrl = "http://weibo.com/" + responseJson.userinfo.uniqueid +  "/myfans"
+            var myfansUrl = "http://weibo.com/" + responseJson.userinfo.uniqueid + "/myfans"
 
             request({
                 "uri": myfansUrl,
@@ -265,23 +265,23 @@ function start() {
             console.log("查询已经记录的用户");
             var nIndex = 0;
 
-         userColl.find({},{stream:true}).each(function(doc){
+            userColl.find({}, {stream: true}).each(function (doc) {
                 cachedUsers[doc.uId] = true;
                 lastUid = doc.uId;
-            }).success(function(){
+            }).success(function () {
                 console.log("已有用户已经缓存完成, 开始进行递归查询");
                 console.log(lastUid);
                 getFansRecur("1708942053");  //周鸿祎
-            }).error(function(err){
-             console.log(err);
-         });
+            }).error(function (err) {
+                console.log(err);
+            });
 
-          /*
-           var myFans = getUserLst(body);
-           console.log("Myfans:" + myFans.length);
-          myFans.map(function(item){
-                getFansRecur(item.uId);
-            }); */
+            /*
+             var myFans = getUserLst(body);
+             console.log("Myfans:" + myFans.length);
+             myFans.map(function(item){
+             getFansRecur(item.uId);
+             }); */
         }
     ], function (err) {
         console.log(err)
